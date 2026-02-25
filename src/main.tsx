@@ -1,5 +1,6 @@
-import { StrictMode, useState } from 'react'
+import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './index.css'
 
 import OverviewPage from './pages/OverviewPage';
@@ -9,7 +10,6 @@ import IncomesPage from './pages/IncomesPage';
 import DesignSystemPage from './pages/DesignSystem';
 
 import { MainLayout } from './components/templates/MainLayout'
-import type { Page } from './types';
 import { ToastContainer } from 'react-toastify';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useUsuarios } from './hooks/api/useUsuarios';
@@ -23,43 +23,39 @@ const queryClient = new QueryClient({
 });
 
 const AppRoot = () => {
-  const [currentPage, setCurrentPage] = useState<Page>('visao-geral');
   const { data: usuarios = [] } = useUsuarios();
   const currentUser = usuarios.length > 0 ? usuarios[0] : null;
 
-  // menuItems removed as they are unused here
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'visao-geral':
-        return <OverviewPage />;
-      case 'entradas':
-        return <IncomesPage />;
-      case 'cartoes':
-        return <CardsPage />;
-      case 'gastos-recorrentes':
-        return <RecurringExpensesPage />;
-      case 'design-system':
-        return <DesignSystemPage />;
-      case 'configuracoes':
-        return (
-          <div className="flex-1 p-6 md:p-8 overflow-y-auto w-full flex items-center justify-center">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold text-foreground mb-2">Configurações</h1>
-              <p className="text-muted-foreground">Em breve...</p>
-            </div>
-          </div>
-        );
-      default:
-        return <CardsPage />;
-    }
-  };
-
   return (
-    <MainLayout currentPage={currentPage} onNavigate={setCurrentPage} currentUser={currentUser}>
+    <BrowserRouter>
       <ToastContainer />
-      {renderPage()}
-    </MainLayout>
+      <Routes>
+        <Route element={<MainLayout currentUser={currentUser} />}>
+          <Route path="/" element={<OverviewPage />} />
+          <Route path="/entradas" element={<IncomesPage />} />
+          <Route path="/cartoes" element={<CardsPage />} />
+          <Route path="/gastos-recorrentes" element={<RecurringExpensesPage />} />
+          <Route path="/design-system" element={<DesignSystemPage />} />
+          <Route path="/relatorios" element={
+            <div className="flex-1 p-6 md:p-8 overflow-y-auto w-full flex items-center justify-center">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-foreground mb-2">Relatórios</h1>
+                <p className="text-muted-foreground">Em breve...</p>
+              </div>
+            </div>
+          } />
+          <Route path="/configuracoes" element={
+            <div className="flex-1 p-6 md:p-8 overflow-y-auto w-full flex items-center justify-center">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-foreground mb-2">Configurações</h1>
+                <p className="text-muted-foreground">Em breve...</p>
+              </div>
+            </div>
+          } />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
 

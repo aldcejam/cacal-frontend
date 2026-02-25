@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from '../organisms/Sidebar';
-import type { Page } from '../../types';
+import { Outlet } from 'react-router-dom';
 import type { Usuario } from '../../api/services/usuario/@types/Usuario';
 
 interface MainLayoutProps {
-    children: React.ReactNode;
-    currentPage: Page;
-    onNavigate: (page: Page) => void;
     currentUser: Usuario | null;
 }
 
-export const MainLayout = ({ children, currentPage, onNavigate, currentUser }: MainLayoutProps) => {
+export const MainLayout = ({ currentUser }: MainLayoutProps) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isMobile, setIsMobile] = useState(false);
 
@@ -30,8 +27,7 @@ export const MainLayout = ({ children, currentPage, onNavigate, currentUser }: M
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-    const handleNavigate = (page: Page) => {
-        onNavigate(page);
+    const handleMenuClick = () => {
         if (isMobile) setIsSidebarOpen(false);
     };
 
@@ -41,8 +37,7 @@ export const MainLayout = ({ children, currentPage, onNavigate, currentUser }: M
             <Sidebar
                 isOpen={isSidebarOpen}
                 toggleSidebar={toggleSidebar}
-                currentPage={currentPage}
-                onNavigate={handleNavigate}
+                onMenuClick={handleMenuClick}
                 currentUser={currentUser}
             />
 
@@ -62,7 +57,7 @@ export const MainLayout = ({ children, currentPage, onNavigate, currentUser }: M
                     </button>
                 </div>
 
-                {children}
+                <Outlet />
             </main>
         </div>
     );

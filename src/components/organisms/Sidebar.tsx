@@ -1,5 +1,5 @@
-import type { Page } from '../../types';
 import type { Usuario } from '../../api/services/usuario/@types/Usuario';
+import { Link, useLocation } from 'react-router-dom';
 
 // Icons wrapper for cleaner usage
 const Icons = {
@@ -19,27 +19,26 @@ const Icons = {
 interface SidebarProps {
     isOpen: boolean;
     toggleSidebar: () => void;
-    currentPage: Page;
-    onNavigate: (page: Page) => void;
+    onMenuClick: () => void;
     currentUser: Usuario | null;
 }
 
 export const Sidebar = ({
     isOpen,
     toggleSidebar,
-    currentPage,
-    onNavigate,
+    onMenuClick,
     currentUser
 }: SidebarProps) => {
+    const location = useLocation();
 
     const menuItems = [
-        { name: 'Visão Geral', icon: <Icons.Home />, page: 'visao-geral' as Page },
-        { name: 'Entradas', icon: <Icons.Wallet />, page: 'entradas' as Page },
-        { name: 'Meus Cartões', icon: <Icons.CreditCard />, page: 'cartoes' as Page },
-        { name: 'Gastos Recorrentes', icon: <Icons.Repeat />, page: 'gastos-recorrentes' as Page },
-        { name: 'Design System', icon: <Icons.DesignSystem />, page: 'design-system' as Page },
-        { name: 'Relatórios', icon: <Icons.PieChart />, page: 'relatorios' as Page },
-        { name: 'Configurações', icon: <Icons.Settings />, page: 'configuracoes' as Page },
+        { name: 'Visão Geral', icon: <Icons.Home />, path: '/' },
+        { name: 'Entradas', icon: <Icons.Wallet />, path: '/entradas' },
+        { name: 'Meus Cartões', icon: <Icons.CreditCard />, path: '/cartoes' },
+        { name: 'Gastos Recorrentes', icon: <Icons.Repeat />, path: '/gastos-recorrentes' },
+        { name: 'Design System', icon: <Icons.DesignSystem />, path: '/design-system' },
+        { name: 'Relatórios', icon: <Icons.PieChart />, path: '/relatorios' },
+        { name: 'Configurações', icon: <Icons.Settings />, path: '/configuracoes' },
     ];
 
     return (
@@ -101,11 +100,12 @@ export const Sidebar = ({
                     </div>
 
                     {menuItems.map((item) => {
-                        const isActive = currentPage === item.page;
+                        const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
                         return (
-                            <button
+                            <Link
                                 key={item.name}
-                                onClick={() => onNavigate(item.page)}
+                                to={item.path}
+                                onClick={onMenuClick}
                                 title={!isOpen ? item.name : ''}
                                 className={`
                                     w-full flex items-center rounded-xl cursor-pointer text-sm font-medium transition-all duration-300 group relative overflow-hidden
@@ -133,7 +133,7 @@ export const Sidebar = ({
                                         {item.name}
                                     </div>
                                 )}
-                            </button>
+                            </Link>
                         );
                     })}
                 </nav>
