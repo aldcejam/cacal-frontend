@@ -1,24 +1,26 @@
 import { gerarService } from "../gerarService";
 import type { ServiceInputProps } from "../ServiceInputProps";
-import type { Transacao } from "./@types/Transacao";
+import type { TransactionFindRes } from "./@types/TransactionFindRes";
+import type { TransactionSaveReq } from "./@types/TransactionSaveReq";
+import type { TransactionSaveRes } from "./@types/TransactionSaveRes";
 
 export const transacaoGateway = {
   findAll: async (input: ServiceInputProps<null, { start?: string; end?: string }>) =>
-    await gerarService<Array<Transacao>>({
+    await gerarService<Array<TransactionFindRes>>({
       endpoint: `/transacoes`,
       method: "GET",
       options: input,
     }),
 
-  save: async (input: ServiceInputProps<Transacao, null>) =>
-    await gerarService<Transacao>({
+  save: async (input: ServiceInputProps<TransactionSaveReq, null>) =>
+    await gerarService<TransactionSaveRes>({
       endpoint: `/transacoes`,
       method: "POST",
       options: input,
     }),
 
   findById: async (id: string, input: ServiceInputProps<null, null>) =>
-    await gerarService<Transacao>({
+    await gerarService<TransactionFindRes>({
       endpoint: `/transacoes/${id}`,
       method: "GET",
       options: input,

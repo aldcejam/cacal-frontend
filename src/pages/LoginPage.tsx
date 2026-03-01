@@ -1,22 +1,36 @@
-import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography, message } from 'antd';
+import { useState } from 'react';
+import { Form, Input, Button, Card, Typography } from 'antd';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { api } from '../api/api';
+import { useAuthStore } from '../stores/useAuthStore';
 
 const { Title, Text } = Typography;
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const login = useAuthStore((s) => s.login);
 
-    const onFinish = (values: any) => {
+    const onFinish = async (values: { email: string; password: string }) => {
         setLoading(true);
-        // Simulate login request, to be replaced by actual API call
-        setTimeout(() => {
-            message.success('Login efetuado com sucesso!');
+        try {
+            const response = await api.auth.login({
+                body: { email: values.email, password: values.password },
+            });
+            if (response?.user && response?.access_token) {
+                login(response.user, response.access_token);
+                toast.success('Login efetuado com sucesso!');
+                navigate('/');
+            } else {
+                toast.error('Resposta inválida do servidor.');
+            }
+        } catch {
+            // erros HTTP já tratados pelo interceptor do gerarService
+        } finally {
             setLoading(false);
-            navigate('/');
-        }, 1000);
+        }
     };
 
     return (

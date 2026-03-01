@@ -12,9 +12,10 @@ import IncomesPage from './pages/IncomesPage';
 import DesignSystemPage from './pages/DesignSystem';
 
 import { MainLayout } from './components/templates/MainLayout'
+import { ProtectedRoute } from './components/templates/ProtectedRoute';
+import { GuestRoute } from './components/templates/GuestRoute';
 import { ToastContainer } from 'react-toastify';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,36 +26,42 @@ const queryClient = new QueryClient({
 });
 
 const AppRoot = () => {
-
   return (
     <ConfigProvider theme={{ algorithm: theme.darkAlgorithm }}>
       <BrowserRouter>
         <ToastContainer />
         <Routes>
-          <Route path="/auth/login" element={<LoginPage />} />
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<OverviewPage />} />
-            <Route path="/entradas" element={<IncomesPage />} />
-            <Route path="/cartoes" element={<CardsPage />} />
-            <Route path="/gastos-recorrentes" element={<RecurringExpensesPage />} />
-            <Route path="/design-system" element={<DesignSystemPage />} />
-            <Route path="/relatorios" element={
-              <div className="flex-1 p-6 md:p-8 overflow-y-auto w-full flex items-center justify-center">
-                <div className="text-center">
-                  <h1 className="text-2xl font-bold text-foreground mb-2">Relatórios</h1>
-                  <p className="text-muted-foreground">Em breve...</p>
+          {/* Rotas públicas: redireciona para / se já autenticado */}
+          <Route element={<GuestRoute />}>
+            <Route path="/auth/login" element={<LoginPage />} />
+          </Route>
+
+          {/* Rotas protegidas: redireciona para /auth/login se não autenticado */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<OverviewPage />} />
+              <Route path="/entradas" element={<IncomesPage />} />
+              <Route path="/cartoes" element={<CardsPage />} />
+              <Route path="/gastos-recorrentes" element={<RecurringExpensesPage />} />
+              <Route path="/design-system" element={<DesignSystemPage />} />
+              <Route path="/relatorios" element={
+                <div className="flex-1 p-6 md:p-8 overflow-y-auto w-full flex items-center justify-center">
+                  <div className="text-center">
+                    <h1 className="text-2xl font-bold text-foreground mb-2">Relatórios</h1>
+                    <p className="text-muted-foreground">Em breve...</p>
+                  </div>
                 </div>
-              </div>
-            } />
-            <Route path="/configuracoes" element={
-              <div className="flex-1 p-6 md:p-8 overflow-y-auto w-full flex items-center justify-center">
-                <div className="text-center">
-                  <h1 className="text-2xl font-bold text-foreground mb-2">Configurações</h1>
-                  <p className="text-muted-foreground">Em breve...</p>
+              } />
+              <Route path="/configuracoes" element={
+                <div className="flex-1 p-6 md:p-8 overflow-y-auto w-full flex items-center justify-center">
+                  <div className="text-center">
+                    <h1 className="text-2xl font-bold text-foreground mb-2">Configurações</h1>
+                    <p className="text-muted-foreground">Em breve...</p>
+                  </div>
                 </div>
-              </div>
-            } />
-            <Route path="*" element={<Navigate to="/" replace />} />
+              } />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
           </Route>
         </Routes>
       </BrowserRouter>

@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from '../organisms/Sidebar';
 import { Outlet } from 'react-router-dom';
-import { useUsuarios } from '../../hooks/api/useUsuarios';
+import { useAuthStore } from '../../stores/useAuthStore';
 
 export const MainLayout = () => {
-    const { data: usuarios = [] } = useUsuarios();
-    const currentUser = usuarios.length > 0 ? usuarios[0] : null;
+    const user = useAuthStore((s) => s.user);
+    const currentUser = user ? {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatarUrl: user.avatarUrl,
+    } : null;
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isMobile, setIsMobile] = useState(false);
 

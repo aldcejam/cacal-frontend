@@ -1,6 +1,7 @@
 import axios, { type Method, } from "axios";
 import { toast } from "react-toastify";
 import { isBlob } from "../utils/isBlob";
+import { useAuthStore } from "../../stores/useAuthStore";
 
 export interface GerarServiceProps<BODY = object | FormData, QUERY = Record<string, any>> {
     endpoint: string;
@@ -66,6 +67,7 @@ api.interceptors.response.use(response => response, error => {
         return Promise.reject(error.response.data);
     }
     if (error.response?.status === 401) {
+        useAuthStore.getState().logout();
         toast.error('Sessão expirada, faça login novamente');
         if (window.location.pathname !== '/auth/login') {
             window.location.href = '/auth/login';

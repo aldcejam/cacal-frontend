@@ -1,24 +1,26 @@
 import { gerarService } from "../gerarService";
 import type { ServiceInputProps } from "../ServiceInputProps";
-import type { Cartao } from "./@types/Cartao";
+import type { CardFindRes } from "./@types/CardFindRes";
+import type { CardSaveReq } from "./@types/CardSaveReq";
+import type { CardSaveRes } from "./@types/CardSaveRes";
 
 export const cartaoGateway = {
   findAll: async (input: ServiceInputProps<null, { start?: string; end?: string }>) =>
-    await gerarService<Array<Cartao>>({
+    await gerarService<Array<CardFindRes>>({
       endpoint: `/cartoes`,
       method: "GET",
       options: input,
     }),
 
-  save: async (input: ServiceInputProps<Cartao, null>) =>
-    await gerarService<Cartao>({
+  save: async (input: ServiceInputProps<CardSaveReq, null>) =>
+    await gerarService<CardSaveRes>({
       endpoint: `/cartoes`,
       method: "POST",
       options: input,
     }),
 
   findById: async (id: string, input: ServiceInputProps<null, null>) =>
-    await gerarService<Cartao>({
+    await gerarService<CardFindRes>({
       endpoint: `/cartoes/${id}`,
       method: "GET",
       options: input,
