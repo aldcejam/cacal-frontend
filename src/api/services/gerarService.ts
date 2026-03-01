@@ -59,6 +59,14 @@ const api = axios.create({
     withCredentials: true,
 });
 
+api.interceptors.request.use(config => {
+    const token = useAuthStore.getState().token;
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
 api.interceptors.response.use(response => response, error => {
     if (error.response?.status === 400) {
         if (!error.response.data.detail) {
