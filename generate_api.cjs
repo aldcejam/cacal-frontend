@@ -1,244 +1,337 @@
+#!/usr/bin/env node
+/**
+ * generate_api.cjs
+ * ------------------------------------------------------------------
+ * Reads the OpenAPI 3.0 JSON (from a local file OR a live URL) and
+ * generates typed gateway files + @types following the project pattern:
+ *
+ *   src/api/services/{domain}/
+ *     @types/
+ *       {Schema}.ts
+ *     {domain}Gateway.ts
+ *   src/api/api.ts
+ *
+ * Usage:
+ *   node generate_api.cjs                        # reads ./openapi.json
+ *   node generate_api.cjs http://localhost:8080/v3/api-docs   # fetches from URL
+ * ------------------------------------------------------------------
+ */
+
+'use strict';
 
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
+const https = require('https');
 
-const openApiSpec = JSON.parse(fs.readFileSync('openapi.json', 'utf8'));
-const outputDir = path.join(__dirname, 'src/api/services');
+// ─── Config ───────────────────────────────────────────────────────────────────
+// Accepts --api-doc=<url>, --api-doc <url>, a positional URL, or defaults to openapi.json
+function resolveSource(argv) {
+    const flagIndex = argv.findIndex(a => a === '--api-doc' || a.startsWith('--api-doc='));
+    if (flagIndex !== -1) {
+        const flagArg = argv[flagIndex];
+        if (flagArg.includes('=')) return flagArg.split('=').slice(1).join('=').trim();
+        if (argv[flagIndex + 1]) return argv[flagIndex + 1].trim();
+    }
+    // Fallback: first positional arg after node + script
+    const positional = argv.slice(2).find(a => !a.startsWith('-'));
+    return positional || 'openapi.json';
+}
 
-// Helper to capitalize first letter
-const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const SOURCE = resolveSource(process.argv);
+const OUTPUT_DIR = path.join(__dirname, 'src/api/services');
+const API_FILE = path.join(__dirname, 'src/api/api.ts');
 
-// Helper to camelCase (gasto-recorrente -> gastoRecorrente)
-const toCamelCase = (s) => s.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const capitalize = s => s.charAt(0).toUpperCase() + s.slice(1);
+const toCamelCase = s => s.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 
-// Map OpenAPI types to TypeScript types
-const mapType = (schema) => {
-    if (!schema) return 'any';
-    if (schema.$ref) {
-        return capitalize(schema.$ref.split('/').pop());
-    }
-    if (schema.type === 'array') {
-        return `Array<${mapType(schema.items)}>`;
-    }
-    if (schema.type === 'integer' || schema.type === 'number') {
-        return 'number';
-    }
-    if (schema.type === 'boolean') {
-        return 'boolean';
-    }
-    if (schema.type === 'string') {
-        if (schema.format === 'date' || schema.format === 'date-time') {
-            return 'string';
+/**
+ * Resolve an OpenAPI schema to a TypeScript type string.
+ * Handles $ref, arrays, primitives and objects.
+ */
+function mapType(schema) {
+    if (!schema) return 'unknown';
+    if (schema.$ref) return capitalize(schema.$ref.split('/').pop());
+    if (schema.type === 'array') return `Array<${mapType(schema.items)}>`;
+    if (schema.type === 'integer' || schema.type === 'number') return 'number';
+    if (schema.type === 'boolean') return 'boolean';
+    if (schema.type === 'string') return 'string';
+    if (schema.type === 'object') return 'Record<string, unknown>';
+    return 'unknown';
+}
+
+/**
+ * Given a schema definition object build the TS type body.
+ * Required fields become non-optional; optional ones keep `?`.
+ */
+function buildTypeBody(schema, allTypes) {
+    const props = schema.properties || {};
+    const required = new Set(schema.required || []);
+    const imports = new Map(); // typeName -> line
+
+    let body = '';
+    for (const [propName, propSchema] of Object.entries(props)) {
+        const optional = required.has(propName) ? '' : '?';
+        const tsType = mapType(propSchema);
+        body += `  ${propName}${optional}: ${tsType};\n`;
+
+        // Collect cross-type imports
+        if (propSchema.$ref) {
+            const refName = capitalize(propSchema.$ref.split('/').pop());
+            imports.set(refName, refName);
         }
-        return 'string';
-    }
-    return 'any';
-};
-
-// We will generate services based on Tags or Paths
-const services = {};
-const typeDefinitions = {};
-
-// 1. Collect all types and generate their code
-Object.keys(openApiSpec.components.schemas).forEach(schemaName => {
-    const schema = openApiSpec.components.schemas[schemaName];
-    const properties = schema.properties || {};
-
-    let tsCode = `export type ${capitalize(schemaName)} = {\n`;
-    Object.keys(properties).forEach(propName => {
-        const prop = properties[propName];
-        tsCode += `    ${propName}?: ${mapType(prop)}\n`;
-    });
-    tsCode += `}\n`;
-
-    typeDefinitions[schemaName] = tsCode;
-});
-
-// 2. Group paths by Controller (Tag)
-Object.keys(openApiSpec.paths).forEach(pathKey => {
-    const pathItem = openApiSpec.paths[pathKey];
-    Object.keys(pathItem).forEach(method => {
-        const operation = pathItem[method];
-        const tag = operation.tags[0]; // e.g., "usuario-controller"
-        let serviceName = tag.replace('-controller', ''); // e.g., "gasto-recorrente"
-        serviceName = toCamelCase(serviceName); // e.g., "gastoRecorrente"
-
-        if (!services[serviceName]) {
-            services[serviceName] = {
-                methods: [],
-                types: new Set()
-            };
+        if (propSchema.type === 'array' && propSchema.items?.$ref) {
+            const refName = capitalize(propSchema.items.$ref.split('/').pop());
+            imports.set(refName, refName);
         }
+    }
 
-        // Add methods
-        services[serviceName].methods.push({
-            name: operation.operationId,
-            path: pathKey,
-            method: method.toUpperCase(),
-            params: operation.parameters || [],
-            requestBody: operation.requestBody
+    return { body, imports };
+}
+
+/**
+ * Determine which gateway "domain" a given schema belongs to by checking
+ * which service actually references it. Falls back to 'shared'.
+ */
+function assignOwner(schemaName, services) {
+    for (const [svcName, svc] of Object.entries(services)) {
+        if (svc.usedTypes.has(schemaName)) return svcName;
+    }
+    // Simple prefix name matching as secondary heuristic  
+    const lower = schemaName.toLowerCase().replace(/request|response/g, '');
+    for (const svcName of Object.keys(services)) {
+        if (lower.startsWith(svcName.replace(/-/g, '').toLowerCase())) return svcName;
+    }
+    return 'shared';
+}
+
+/**
+ * Clean-up duplicate suffixes added by Spring-doc (findAll_1, deleteById_2 …)
+ */
+const cleanOperationId = id => id.replace(/_\d+$/, '');
+
+/**
+ * Build a smart method name from HTTP method + path when operationId is generic.
+ * E.g.  GET /cartoes/{id}  → findById
+ *       POST /cartoes       → create
+ *       DELETE /cartoes/{id}→ deleteById
+ */
+function inferMethodName(httpMethod, pathKey) {
+    const hasId = pathKey.includes('{');
+    switch (httpMethod) {
+        case 'GET': return hasId ? 'findById' : 'findAll';
+        case 'POST': return 'create';
+        case 'PUT': return hasId ? 'update' : 'save';
+        case 'PATCH': return hasId ? 'patch' : 'save';
+        case 'DELETE': return hasId ? 'deleteById' : 'deleteAll';
+        default: return httpMethod.toLowerCase();
+    }
+}
+
+// ─── Fetch spec ───────────────────────────────────────────────────────────────
+async function loadSpec(source) {
+    if (/^https?:\/\//i.test(source)) {
+        console.log(`📡 Fetching OpenAPI spec from ${source} …`);
+        return new Promise((resolve, reject) => {
+            const lib = source.startsWith('https') ? https : http;
+            lib.get(source, res => {
+                let data = '';
+                res.on('data', chunk => (data += chunk));
+                res.on('end', () => {
+                    try { resolve(JSON.parse(data)); }
+                    catch (e) { reject(new Error('Failed to parse remote JSON: ' + e.message)); }
+                });
+            }).on('error', reject);
         });
+    }
+    console.log(`📂 Reading spec from ${source} …`);
+    return JSON.parse(fs.readFileSync(source, 'utf8'));
+}
 
-        // Identify types used
-        if (operation.requestBody) {
-            const ref = operation.requestBody.content['application/json'].schema.$ref;
-            if (ref) services[serviceName].types.add(ref.split('/').pop());
-        }
-        if (operation.responses['200'] && operation.responses['200'].content) {
-            const schema = operation.responses['200'].content['*/*'].schema;
-            if (schema.$ref) services[serviceName].types.add(schema.$ref.split('/').pop());
-            if (schema.type === 'array' && schema.items.$ref) services[serviceName].types.add(schema.items.$ref.split('/').pop());
-        }
-    });
-});
+// ─── Main ─────────────────────────────────────────────────────────────────────
+async function main() {
+    const spec = await loadSpec(SOURCE);
 
-// Map schemas to owners
-const schemaOwners = {};
-Object.keys(typeDefinitions).forEach(schemaName => {
-    // dumb heuristic: lowercase schema name
-    Object.keys(services).forEach(svc => {
-        if (schemaName.toLowerCase().startsWith(svc.replace(/-/g, '').toLowerCase())) {
-            schemaOwners[schemaName] = svc;
-        }
-    });
+    const schemas = spec.components?.schemas || {};
+    const paths = spec.paths || {};
 
-    if (!schemaOwners[schemaName]) {
-        if (services[toCamelCase(schemaName.toLowerCase())]) {
-            schemaOwners[schemaName] = toCamelCase(schemaName.toLowerCase());
+    // ── 1. Build service map keyed by camelCased tag name ────────────────────
+    const services = {}; // { [name]: { methods: [], usedTypes: Set<string> } }
+
+    for (const [pathKey, pathItem] of Object.entries(paths)) {
+        for (const [httpMethod, operation] of Object.entries(pathItem)) {
+            if (!operation.tags) continue;
+            const rawTag = operation.tags[0];                     // e.g. "gasto-recorrente-controller"
+            const svcName = toCamelCase(rawTag.replace(/-controller$/, '')); // e.g. "gastoRecorrente"
+
+            if (!services[svcName]) {
+                services[svcName] = { methods: [], usedTypes: new Set() };
+            }
+
+            const METHOD = httpMethod.toUpperCase();
+            const opId = cleanOperationId(operation.operationId || '');
+            const name = opId || inferMethodName(METHOD, pathKey);
+
+            // ── Request body type ──────────────────────────────────────────────
+            let bodyTypeName = null;
+            const bodySchema = operation.requestBody?.content?.['application/json']?.schema;
+            if (bodySchema?.$ref) {
+                bodyTypeName = capitalize(bodySchema.$ref.split('/').pop());
+                services[svcName].usedTypes.add(bodyTypeName);
+            }
+
+            // ── Path params ───────────────────────────────────────────────────
+            const pathParams = (operation.parameters || []).filter(p => p.in === 'path');
+
+            // ── Query params ──────────────────────────────────────────────────
+            const queryParams = (operation.parameters || []).filter(p => p.in === 'query');
+
+            // ── Response type ─────────────────────────────────────────────────
+            let responseTypeName = null;
+            const respContent = operation.responses?.['200']?.content;
+            if (respContent) {
+                const respSchema = respContent['*/*']?.schema || respContent['application/json']?.schema;
+                if (respSchema?.$ref) {
+                    responseTypeName = capitalize(respSchema.$ref.split('/').pop());
+                    services[svcName].usedTypes.add(responseTypeName);
+                } else if (respSchema?.type === 'array' && respSchema.items?.$ref) {
+                    responseTypeName = `Array<${capitalize(respSchema.items.$ref.split('/').pop())}>`;
+                    services[svcName].usedTypes.add(capitalize(respSchema.items.$ref.split('/').pop()));
+                }
+            }
+
+            services[svcName].methods.push({
+                name,
+                path: pathKey,
+                method: METHOD,
+                pathParams,
+                queryParams,
+                bodyTypeName,
+                responseTypeName,
+            });
         }
     }
-});
 
-// Ensure all schemas have an owner
-Object.keys(typeDefinitions).forEach(schemaName => {
-    if (!schemaOwners[schemaName]) {
-        schemaOwners[schemaName] = 'shared';
-        for (const svc in services) {
-            if (services[svc].types.has(schemaName)) {
-                schemaOwners[schemaName] = svc;
-                break;
-            }
-        }
+    // ── 2. Assign owner service to each schema ────────────────────────────────
+    const schemaOwners = {};
+    for (const schemaName of Object.keys(schemas)) {
+        schemaOwners[schemaName] = assignOwner(schemaName, services);
     }
-});
 
-// Write Types to their owners
-Object.keys(schemaOwners).forEach(schemaName => {
-    const owner = schemaOwners[schemaName];
-    const typeContent = typeDefinitions[schemaName];
+    // ── 3. Write @types files ─────────────────────────────────────────────────
+    for (const [schemaName, schema] of Object.entries(schemas)) {
+        const owner = schemaOwners[schemaName];
+        const { body, imports } = buildTypeBody(schema, schemas);
 
-    let imports = [];
-    Object.keys(typeDefinitions).forEach(otherType => {
-        if (otherType !== schemaName && typeContent.includes(otherType)) {
-            const otherOwner = schemaOwners[otherType];
-            if (otherOwner !== owner) {
-                imports.push(`import { ${otherType} } from "../../${otherOwner}/@types/${otherType}";`);
-            } else {
-                imports.push(`import { ${otherType} } from "./${otherType}";`);
+        // Resolve import lines (cross-file only)
+        const importLines = [];
+        for (const [refName] of imports) {
+            if (refName === schemaName) continue; // no self-import
+            const refOwner = schemaOwners[refName] || 'shared';
+            const rel = refOwner === owner ? `./${refName}` : `../../${refOwner}/@types/${refName}`;
+            importLines.push(`import type { ${refName} } from "${rel}";`);
+        }
+
+        const content = [
+            ...importLines,
+            importLines.length ? '' : null,
+            `export type ${schemaName} = {`,
+            body.trimEnd(),
+            `};`,
+            '',
+        ].filter(l => l !== null).join('\n');
+
+        const dir = path.join(OUTPUT_DIR, owner, '@types');
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, `${schemaName}.ts`), content);
+        console.log(`  ✏️  @types/${schemaName}.ts  →  services/${owner}/@types/`);
+    }
+
+    // ── 4. Write gateway files ────────────────────────────────────────────────
+    for (const [svcName, svc] of Object.entries(services)) {
+        const importLines = [
+            `import { gerarService } from "../gerarService";`,
+            `import type { ServiceInputProps } from "../ServiceInputProps";`,
+        ];
+
+        // Collect type imports
+        for (const typeName of svc.usedTypes) {
+            const owner = schemaOwners[typeName] || 'shared';
+            const rel = owner === svcName ? `./@types/${typeName}` : `../${owner}/@types/${typeName}`;
+            importLines.push(`import type { ${typeName} } from "${rel}";`);
+        }
+
+        let methodsCode = '';
+        const seenNames = new Map(); // detect duplicates and suffix them
+        for (const m of svc.methods) {
+            // Deduplicate method names
+            const count = seenNames.get(m.name) || 0;
+            seenNames.set(m.name, count + 1);
+            const methodName = count === 0 ? m.name : `${m.name}${capitalize(m.method.toLowerCase())}`;
+
+            // Build arg list
+            const args = [];
+            for (const p of m.pathParams) {
+                args.push(`${p.name}: ${mapType(p.schema)}`);
             }
-        }
-    });
 
-    const fileContent = imports.join('\n') + (imports.length ? '\n\n' : '') + typeContent;
-    const ownerDir = path.join(outputDir, owner, '@types');
-    if (!fs.existsSync(ownerDir)) fs.mkdirSync(ownerDir, { recursive: true });
-
-    fs.writeFileSync(path.join(ownerDir, `${schemaName}.ts`), fileContent);
-});
-
-// Write Gateways
-Object.keys(services).forEach(serviceName => {
-    const methods = services[serviceName].methods;
-    let imports = [
-        `import { gerarService } from "../gerarService";`,
-        `import { ServiceInputProps } from "../ServiceInputProps";`
-    ];
-
-    const usedTypes = new Set();
-    methods.forEach(m => {
-        if (m.requestBody) {
-            const ref = m.requestBody.content['application/json'].schema.$ref;
-            if (ref) usedTypes.add(ref.split('/').pop());
-        }
-        if (m.params) {
-            // check params if they use types? usually primitives
-        }
-    });
-
-    usedTypes.forEach(t => {
-        const owner = schemaOwners[t];
-        if (owner) {
-            if (owner !== serviceName) {
-                imports.push(`import { ${t} } from "../${owner}/@types/${t}";`);
-            } else {
-                imports.push(`import { ${t} } from "./@types/${t}";`);
+            // Build query type inline (or null)
+            let queryType = 'null';
+            if (m.queryParams.length > 0) {
+                const fields = m.queryParams
+                    .map(p => `${p.name}?: ${mapType(p.schema)}`)
+                    .join('; ');
+                queryType = `{ ${fields} }`;
             }
+
+            const bodyType = m.bodyTypeName ?? 'null';
+            args.push(`input: ServiceInputProps<${bodyType}, ${queryType}>`);
+
+            // Template literal endpoint
+            const endpoint = m.path.replace(/\{(\w+)\}/g, '${$1}');
+
+            // Return type
+            const retType = m.responseTypeName ?? 'void';
+
+            methodsCode +=
+                `  ${methodName}: async (${args.join(', ')}) =>\n` +
+                `    await gerarService<${retType}>({\n` +
+                `      endpoint: \`${endpoint}\`,\n` +
+                `      method: "${m.method}",\n` +
+                `      options: input,\n` +
+                `    }),\n\n`;
         }
-    });
 
-    let gatewayContent = imports.join('\n') + `\n\n`;
+        const content =
+            importLines.join('\n') + '\n\n' +
+            `export const ${svcName}Gateway = {\n` +
+            methodsCode +
+            `};\n`;
 
-    // Naming
-    const gatewayName = `${serviceName}Gateway`;
+        const dir = path.join(OUTPUT_DIR, svcName);
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, `${svcName}Gateway.ts`), content);
+        console.log(`  ✏️  ${svcName}Gateway.ts`);
+    }
 
-    gatewayContent += `export const ${gatewayName} = {\n`;
+    // ── 5. Write api.ts barrel ────────────────────────────────────────────────
+    const importLines = Object.keys(services).map(
+        svc => `import { ${svc}Gateway } from "./services/${svc}/${svc}Gateway";`
+    );
+    const exportLines = Object.keys(services).map(svc => `  ${svc}: ${svc}Gateway,`);
 
-    methods.forEach(m => {
-        // CLEANUP METHOD NAME
-        const cleanName = m.name.replace(/_\d+$/, '');
+    const apiContent =
+        importLines.join('\n') + '\n\n' +
+        `export const api = {\n` +
+        exportLines.join('\n') + '\n' +
+        `};\n`;
 
-        let inputType = 'ServiceInputProps<null, null>';
-        const bodyRef = m.requestBody ? m.requestBody.content['application/json'].schema.$ref : null;
-        const bodyType = bodyRef ? bodyRef.split('/').pop() : 'null';
+    fs.writeFileSync(API_FILE, apiContent);
+    console.log(`\n✅ Done! Generated ${Object.keys(services).length} gateways + api.ts\n`);
+}
 
-        const pathParams = m.params.filter(p => p.in === 'path');
-
-        const args = [];
-        pathParams.forEach(p => args.push(`${p.name}: ${mapType(p.schema)}`));
-        args.push(`input: ServiceInputProps<${bodyType}, null>`);
-
-        const methodSig = `${cleanName}: async (${args.join(', ')})`;
-
-        let endpointStr = m.path.replace(/{/g, '${').replace(/}/g, '}');
-
-        gatewayContent += `  ${methodSig} => (\n`;
-        gatewayContent += `    await gerarService({\n`;
-        gatewayContent += `      endpoint: \`${endpointStr}\`,\n`;
-        gatewayContent += `      method: "${m.method}",\n`;
-        gatewayContent += `      options: input\n`;
-        gatewayContent += `    })\n`;
-        gatewayContent += `  ),\n`;
-    });
-
-    gatewayContent += `};\n`;
-
-    const serviceDir = path.join(outputDir, serviceName);
-    if (!fs.existsSync(serviceDir)) fs.mkdirSync(serviceDir, { recursive: true });
-    fs.writeFileSync(path.join(serviceDir, `${gatewayName}.ts`), gatewayContent);
+main().catch(err => {
+    console.error('❌ Error:', err.message);
+    process.exit(1);
 });
-
-// 4. Create main api.ts
-let apiContent = '';
-Object.keys(services).forEach(svc => {
-    const gatewayName = `${svc}Gateway`;
-    apiContent += `import { ${gatewayName} } from "./services/${svc}/${gatewayName}";\n`;
-});
-apiContent += `\nexport const api = {\n`;
-Object.keys(services).forEach(svc => {
-    apiContent += `    ${svc}: ${gatewayName => `${svc}Gateway`}(),\n`.replace(/.*: /, '').replace(/\(\),/, `: ${svc}Gateway,`); // hacky string manipulation for previous line
-    // simpler:
-});
-apiContent = ''; // reset
-Object.keys(services).forEach(svc => {
-    const gatewayName = `${svc}Gateway`;
-    apiContent += `import { ${gatewayName} } from "./services/${svc}/${gatewayName}";\n`;
-});
-apiContent += `\nexport const api = {\n`;
-Object.keys(services).forEach(svc => {
-    apiContent += `    ${svc}: ${svc}Gateway,\n`;
-});
-apiContent += `};\n`;
-
-fs.writeFileSync(path.join(__dirname, 'src/api/api.ts'), apiContent);
-
-console.log("Generation complete.");

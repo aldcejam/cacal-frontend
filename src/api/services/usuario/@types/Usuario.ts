@@ -1,5 +1,9 @@
 export type Usuario = {
-    id?: string
-    name?: string
-    email?: string
-}
+  id?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  name?: string;
+  email?: string;
+  password?: string;
+  role?: string;
+};
