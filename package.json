@@ -9,8 +9,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate:api": "node generate_api.cjs",
-    "generate:api:url": "node generate_api.cjs --api-doc"
+    "generate:api": "node generate_api.cjs --api-doc http://localhost:8080/v3/api-docs"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",

@@ -1,10 +1,7 @@
-export type Usuario = {
+export type UserResponse = {
   id?: string;
-  createdAt?: string;
-  updatedAt?: string;
   name?: string;
   email?: string;
-  password?: string;
   role?: string;
   avatarUrl?: string;
 };

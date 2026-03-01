@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '../organisms/Sidebar';
 import { Outlet } from 'react-router-dom';
-import type { Usuario } from '../../api/services/usuario/@types/Usuario';
+import { useUsuarios } from '../../hooks/api/useUsuarios';
 
-interface MainLayoutProps {
-    currentUser: Usuario | null;
-}
-
-export const MainLayout = ({ currentUser }: MainLayoutProps) => {
+export const MainLayout = () => {
+    const { data: usuarios = [] } = useUsuarios();
+    const currentUser = usuarios.length > 0 ? usuarios[0] : null;
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isMobile, setIsMobile] = useState(false);
 

@@ -14,7 +14,7 @@ import DesignSystemPage from './pages/DesignSystem';
 import { MainLayout } from './components/templates/MainLayout'
 import { ToastContainer } from 'react-toastify';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useUsuarios } from './hooks/api/useUsuarios';
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,8 +25,6 @@ const queryClient = new QueryClient({
 });
 
 const AppRoot = () => {
-  const { data: usuarios = [] } = useUsuarios();
-  const currentUser = usuarios.length > 0 ? usuarios[0] : null;
 
   return (
     <ConfigProvider theme={{ algorithm: theme.darkAlgorithm }}>
@@ -34,7 +32,7 @@ const AppRoot = () => {
         <ToastContainer />
         <Routes>
           <Route path="/auth/login" element={<LoginPage />} />
-          <Route element={<MainLayout currentUser={currentUser} />}>
+          <Route element={<MainLayout />}>
             <Route path="/" element={<OverviewPage />} />
             <Route path="/entradas" element={<IncomesPage />} />
             <Route path="/cartoes" element={<CardsPage />} />
