@@ -1,14 +1,14 @@
-import type { Usuario } from '../../api/services/usuario/@types/Usuario';
-import type { Cartao } from '../../api/services/cartao/@types/Cartao';
-import type { GastoRecorrente } from '../../api/services/gastoRecorrente/@types/GastoRecorrente';
+import type { User } from '../../api/services/user/@types/User';
+import type { CardFindRes } from '../../api/services/card/@types/CardFindRes';
+import type { ExpenseFindRes } from '../../api/services/recurringExpense/@types/ExpenseFindRes';
 import { CreditCard } from '../molecules/CreditCard';
 import { RecurringExpensesCard } from '../molecules/RecurringExpensesCard';
 // We are reusing CreditCard molecule here instead of the inline card
 
 interface UserBlockProps {
-    user: Usuario;
-    cards: Cartao[];
-    gastosRecorrentes: GastoRecorrente[];
+    user: User;
+    cards: CardFindRes[];
+    gastosRecorrentes: ExpenseFindRes[];
     selectedCardIds: string[];
     onToggleCard: (cardId: string) => void;
 }
@@ -30,7 +30,7 @@ export const UserBlock: React.FC<UserBlockProps> = ({
     selectedCardIds,
     onToggleCard
 }) => {
-    const totalGastos = gastosRecorrentes.reduce((acc, g) => acc + (g.valor || 0), 0);
+    const totalGastos = gastosRecorrentes.reduce((acc, g) => acc + (g.value || 0), 0);
     const userColor = stringToColor(user.name || 'User');
 
     return (

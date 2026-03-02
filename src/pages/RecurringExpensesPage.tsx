@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useGastosRecorrentes } from '../hooks/api/useGastosRecorrentes';
 import { useUsuarios } from '../hooks/api/useUsuarios';
-import { type GastoRecorrente } from '../api/services/gastoRecorrente/@types/GastoRecorrente';
+import type { ExpenseFindRes } from '../api/services/recurringExpense/@types/ExpenseFindRes';
 
 import { UserSelector } from '../components/organisms/UserSelector';
 import { MetricCard } from '../components/molecules/MetricCard';
@@ -38,7 +38,7 @@ export default function RecurringExpensesPage() {
         });
     };
 
-    const handleSort = (key: keyof GastoRecorrente) => {
+    const handleSort = (key: keyof ExpenseFindRes) => {
         let direction = 'asc';
         if (sortConfig.key === key && sortConfig.direction === 'asc') {
             direction = 'desc';
@@ -72,7 +72,7 @@ export default function RecurringExpensesPage() {
         return sortableItems;
     }, [filteredGastos, sortConfig]);
 
-    const totalGastos = filteredGastos.reduce((acc, g) => acc + (g.valor || 0), 0);
+    const totalGastos = filteredGastos.reduce((acc, g) => acc + (g.value || 0), 0);
 
     if (loading) {
         return (

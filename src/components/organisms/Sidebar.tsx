@@ -1,4 +1,4 @@
-import type { Usuario } from '../../api/services/usuario/@types/Usuario';
+import type { User } from '../../api/services/user/@types/User';
 import { Link, useLocation } from 'react-router-dom';
 
 // Icons wrapper for cleaner usage
@@ -20,7 +20,7 @@ interface SidebarProps {
     isOpen: boolean;
     toggleSidebar: () => void;
     onMenuClick: () => void;
-    currentUser: Usuario | null;
+    currentUser: User | null;
 }
 
 export const Sidebar = ({

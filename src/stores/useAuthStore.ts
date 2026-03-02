@@ -1,15 +1,15 @@
 import Cookies from 'js-cookie';
 import { create } from 'zustand';
-import type { UserResponse } from '../api/services/shared/@types/UserResponse';
+import type { UserRes } from '../api/services/user/@types/UserRes';
 
 const COOKIE_KEY = 'cacal_auth';
 const COOKIE_EXPIRES_DAYS = 7;
 
 interface AuthState {
-    user: UserResponse | null;
+    user: UserRes | null;
     token: string | null;
     isAuthenticated: boolean;
-    login: (user: UserResponse, token: string) => void;
+    login: (user: UserRes, token: string) => void;
     logout: () => void;
 }
 

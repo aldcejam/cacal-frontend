@@ -1,17 +1,17 @@
-import { usuarioGateway } from "./services/usuario/usuarioGateway";
-import { transacaoGateway } from "./services/transacao/transacaoGateway";
-import { receitaGateway } from "./services/receita/receitaGateway";
-import { gastoRecorrenteGateway } from "./services/gastoRecorrente/gastoRecorrenteGateway";
-import { cartaoGateway } from "./services/cartao/cartaoGateway";
-import { bancoGateway } from "./services/banco/bancoGateway";
+import { userGateway } from "./services/user/userGateway";
+import { transactionGateway } from "./services/transaction/transactionGateway";
+import { incomeGateway } from "./services/income/incomeGateway";
+import { recurringExpenseGateway } from "./services/recurringExpense/recurringExpenseGateway";
+import { cardGateway } from "./services/card/cardGateway";
+import { bankGateway } from "./services/bank/bankGateway";
 import { authGateway } from "./services/auth/authGateway";
 
 export const api = {
-  usuario: usuarioGateway,
-  transacao: transacaoGateway,
-  receita: receitaGateway,
-  gastoRecorrente: gastoRecorrenteGateway,
-  cartao: cartaoGateway,
-  banco: bancoGateway,
+  user: userGateway,
+  transaction: transactionGateway,
+  income: incomeGateway,
+  recurringExpense: recurringExpenseGateway,
+  card: cardGateway,
+  bank: bankGateway,
   auth: authGateway,
 };

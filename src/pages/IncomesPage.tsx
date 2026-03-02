@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useReceitas } from '../hooks/api/useReceitas';
 import { useUsuarios } from '../hooks/api/useUsuarios';
-import type { Receita } from '../api/services/receita/@types/Receita';
+import type { IncomeFindRes } from '../api/services/income/@types/IncomeFindRes';
 
 import { UserSelector } from '../components/organisms/UserSelector';
 import { Button } from '../components/atoms/Button';
 import { Badge } from '../components/atoms/Badge';
 import { MetricCard } from '../components/molecules/MetricCard';
+import { NewIncomeModal } from '../components/organisms/NewIncomeModal';
 
 const getCategoryColor = (cat: string) => {
     switch (cat) {
@@ -28,14 +29,18 @@ const stringToColor = (str: string) => {
     return '#' + '00000'.substring(0, 6 - c.length) + c;
 };
 
-const Header = () => (
+interface HeaderProps {
+    onOpenNewIncome: () => void;
+}
+
+const Header = ({ onOpenNewIncome }: HeaderProps) => (
     <header className="flex items-center justify-between mb-8 pt-2 md:pt-0 pl-12 md:pl-0">
         <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Entradas de Caixa</h1>
             <p className="text-sm text-muted-foreground hidden sm:block">Gerencie seus rendimentos, salários e benefícios.</p>
         </div>
 
-        <Button variant="primary">
+        <Button variant="primary" onClick={onOpenNewIncome}>
             <div className="flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
                 <span className="hidden sm:inline">Nova Receita</span>
@@ -47,12 +52,12 @@ const Header = () => (
 // IncomesTable Component (Defined locally)
 const IncomesTable = ({
     receitas,
-    showUserColumn
+    showUserColumn,
 }: {
-    receitas: Receita[],
-    showUserColumn: boolean
+    receitas: IncomeFindRes[],
+    showUserColumn: boolean,
 }) => {
-    const totalValue = receitas.reduce((acc, r) => acc + (r.valor || 0), 0);
+    const totalValue = receitas.reduce((acc, r) => acc + (r.value || 0), 0);
 
     return (
         <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -103,15 +108,15 @@ const IncomesTable = ({
                                                     </div>
                                                 </td>
                                             )}
-                                            <td className="p-4 align-middle text-foreground font-medium">{receita.descricao}</td>
+                                            <td className="p-4 align-middle text-foreground font-medium">{receita.description}</td>
                                             <td className="p-4 align-middle">
-                                                <Badge variant={getCategoryColor(receita.categoria || '') as any}>{receita.categoria}</Badge>
+                                                <Badge variant={getCategoryColor(receita.category || '') as any}>{receita.category}</Badge>
                                             </td>
                                             <td className="p-4 align-middle text-muted-foreground">
-                                                Dia {receita.diaRecebimento}
+                                                Dia {receita.receiptDay}
                                             </td>
                                             <td className="p-4 align-middle text-right text-emerald-500 font-bold">
-                                                R$ {(receita.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                R$ {(receita.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             </td>
                                             <td className="p-4 align-middle text-center">
                                                 <button className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground">
@@ -148,6 +153,7 @@ export default function IncomesPage() {
     const error = errorReceitas || errorUsers ? "Failed to load incomes data" : null;
 
     const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+    const [isNewIncomeModalOpen, setIsNewIncomeModalOpen] = useState(false);
 
     useEffect(() => {
         if (usuarios.length > 0 && selectedUserIds.length === 0) {
@@ -171,7 +177,7 @@ export default function IncomesPage() {
         return receitas.filter(r => r.user?.id && selectedUserIds.includes(r.user.id));
     }, [selectedUserIds, receitas]);
 
-    const totalIncome = filteredReceitas.reduce((acc, r) => acc + (r.valor || 0), 0);
+    const totalIncome = filteredReceitas.reduce((acc, r) => acc + (r.value || 0), 0);
 
     if (loading) {
         return (
@@ -191,7 +197,7 @@ export default function IncomesPage() {
 
     return (
         <div className="flex-1 p-6 md:p-8 overflow-y-auto w-full">
-            <Header />
+            <Header onOpenNewIncome={() => setIsNewIncomeModalOpen(true)} />
 
             <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
                 {currentUser && (
@@ -217,6 +223,12 @@ export default function IncomesPage() {
                     showUserColumn={selectedUserIds.length > 1}
                 />
             </div>
+
+            <NewIncomeModal
+                isOpen={isNewIncomeModalOpen}
+                onClose={() => setIsNewIncomeModalOpen(false)}
+                users={usuarios}
+            />
         </div>
     );
 }

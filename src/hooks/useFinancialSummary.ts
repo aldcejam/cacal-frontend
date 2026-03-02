@@ -16,7 +16,7 @@ export const useFinancialSummary = () => {
     const error = errorTrans || errorCards || errorRecur || errorReceitas || errorUsers ? "Failed to load financial data" : null;
 
     const totalGastos = useMemo(() => {
-        return recurringExpenses.reduce((acc, curr) => acc + (curr.valor || 0), 0);
+        return recurringExpenses.reduce((acc, curr) => acc + (curr.value || 0), 0);
     }, [recurringExpenses]);
 
     const totalCartoes = useMemo(() => {

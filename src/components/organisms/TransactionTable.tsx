@@ -1,10 +1,10 @@
 import { Badge } from '../atoms/Badge';
-import type { Transacao } from '../../api/services/transacao/@types/Transacao';
-import type { Cartao } from '../../api/services/cartao/@types/Cartao';
+import type { TransactionFindRes } from '../../api/services/transaction/@types/TransactionFindRes';
+import type { CardFindRes } from '../../api/services/card/@types/CardFindRes';
 
 interface TransactionTableProps {
-    transactions: Transacao[];
-    cards?: Cartao[]; // Unused but updated type just in case
+    transactions: TransactionFindRes[];
+    cards?: CardFindRes[]; // Unused but updated type just in case
     selectedIds?: string[];
     title?: string;
     onSort?: (key: any) => void;
@@ -101,10 +101,10 @@ export const TransactionTable = ({
                                         <tr key={t.id || Math.random().toString()} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                                             <td className="p-4 align-middle font-medium text-foreground">
                                                 <div className="flex items-center gap-2">
-                                                    {card && card.bank ? (
+                                                    {card ? (
                                                         <>
-                                                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: card.bank.color || '#333' }}></span>
-                                                            {card.bank.name || 'Banco'}
+                                                            <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                                            Cartão final {card.lastDigits || '0000'}
                                                         </>
                                                     ) : (
                                                         <>

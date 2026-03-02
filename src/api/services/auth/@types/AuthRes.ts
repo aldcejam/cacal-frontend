@@ -1,4 +1,4 @@
-import type { UserRes } from "../../shared/@types/UserRes";
+import type { UserRes } from "../../user/@types/UserRes";
 
 export type AuthRes = {
   user?: UserRes;

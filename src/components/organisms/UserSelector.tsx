@@ -1,11 +1,11 @@
 import React from 'react';
-import type { Usuario } from '../../api/services/usuario/@types/Usuario';
+import type { User } from '../../api/services/user/@types/User';
 
 interface UserSelectorProps {
     selectedUserIds: string[];
     onToggleUser: (userId: string) => void;
-    currentUser: Usuario;
-    users?: Usuario[]; // Optional for now to keep backward compat if needed, but better required
+    currentUser: User;
+    users?: User[]; // Optional for now to keep backward compat if needed, but better required
 }
 
 // Helper for color generation

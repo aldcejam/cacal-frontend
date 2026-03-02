@@ -1,17 +1,17 @@
 import { useMemo } from 'react';
-import type { Receita } from '../../api/services/receita/@types/Receita';
-import type { Transacao } from '../../api/services/transacao/@types/Transacao';
-import type { GastoRecorrente } from '../../api/services/gastoRecorrente/@types/GastoRecorrente';
-import type { Usuario } from '../../api/services/usuario/@types/Usuario';
-import type { Cartao } from '../../api/services/cartao/@types/Cartao';
+import type { IncomeFindRes } from '../../api/services/income/@types/IncomeFindRes';
+import type { TransactionFindRes } from '../../api/services/transaction/@types/TransactionFindRes';
+import type { ExpenseFindRes } from '../../api/services/recurringExpense/@types/ExpenseFindRes';
+import type { User } from '../../api/services/user/@types/User';
+import type { CardFindRes } from '../../api/services/card/@types/CardFindRes';
 
 interface FinancialOverviewProps {
     onUserClick?: (userId: string) => void;
-    receitas: Receita[];
-    transactions: Transacao[];
-    recurringExpenses: GastoRecorrente[];
-    usuarios: Usuario[];
-    cards: Cartao[];
+    receitas: IncomeFindRes[];
+    transactions: TransactionFindRes[];
+    recurringExpenses: ExpenseFindRes[];
+    usuarios: User[];
+    cards: CardFindRes[];
 }
 
 // Helper for color generation
@@ -34,9 +34,9 @@ export const FinancialOverview = ({
 }: FinancialOverviewProps) => {
     // 1. Calculate Family Totals
     const familyTotals = useMemo(() => {
-        const totalIncome = receitas.reduce((acc, r) => acc + (r.valor || 0), 0);
+        const totalIncome = receitas.reduce((acc, r) => acc + (r.value || 0), 0);
 
-        const totalRecurring = recurringExpenses.reduce((acc, g) => acc + (g.valor || 0), 0);
+        const totalRecurring = recurringExpenses.reduce((acc, g) => acc + (g.value || 0), 0);
 
         const totalCreditCard = transactions.reduce((acc, t) => acc + (t.value || 0), 0);
 
@@ -54,11 +54,11 @@ export const FinancialOverview = ({
 
             const userIncome = receitas
                 .filter((r) => r.user?.id === userId)
-                .reduce((acc, r) => acc + (r.valor || 0), 0);
+                .reduce((acc, r) => acc + (r.value || 0), 0);
 
             const userRecurring = recurringExpenses
                 .filter((g) => g.user?.id === userId)
-                .reduce((acc, g) => acc + (g.valor || 0), 0);
+                .reduce((acc, g) => acc + (g.value || 0), 0);
 
             // Find user's cards
             const userCardIds = cards

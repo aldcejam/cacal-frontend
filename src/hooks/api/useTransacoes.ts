@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/api';
+import type { TransactionFindRes } from '../../api/services/transaction/@types/TransactionFindRes';
 
 export const useTransacoes = () => {
-    return useQuery({
+    return useQuery<TransactionFindRes[]>({
         queryKey: ['transacoes'],
-        queryFn: () => api.transacao.findAll({}),
+        queryFn: () => api.transaction.findAll({}),
     });
 };

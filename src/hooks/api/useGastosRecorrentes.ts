@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/api';
+import type { ExpenseFindRes } from '../../api/services/recurringExpense/@types/ExpenseFindRes';
 
 export const useGastosRecorrentes = () => {
-    return useQuery({
+    return useQuery<ExpenseFindRes[]>({
         queryKey: ['gastosRecorrentes'],
-        queryFn: () => api.gastoRecorrente.findAll({}),
+        queryFn: () => api.recurringExpense.findAll({}),
     });
 };

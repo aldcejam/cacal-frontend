@@ -1,4 +1,4 @@
-import type { GastoRecorrente } from '../../api/services/gastoRecorrente/@types/GastoRecorrente';
+import type { ExpenseFindRes } from '../../api/services/recurringExpense/@types/ExpenseFindRes';
 import { Badge } from '../atoms/Badge';
 
 // Helper for category style reused locally
@@ -36,10 +36,10 @@ const stringToColor = (str: string) => {
 };
 
 interface RecurringExpensesTableProps {
-    gastos: GastoRecorrente[];
-    onSort: (key: any) => void;
-    sortConfig: any;
-    showUserColumn: boolean;
+    gastos: ExpenseFindRes[];
+    onSort?: (key: any) => void;
+    sortConfig?: { key: any; direction: string };
+    showUserColumn?: boolean;
 }
 
 export const RecurringExpensesTable = ({
@@ -87,34 +87,39 @@ export const RecurringExpensesTable = ({
                                     {showUserColumn && (
                                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Usuário</th>
                                     )}
-                                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer group hover:text-foreground transition-colors" onClick={() => onSort('descricao')}>
+                                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer group hover:text-foreground transition-colors" onClick={() => onSort?.('description')}>
                                         <div className="flex items-center gap-1">
                                             Descrição
-                                            {renderSortIcon('descricao')}
+                                            {renderSortIcon('description')}
                                         </div>
                                     </th>
-                                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Pagamento</th>
-                                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer group hover:text-foreground transition-colors" onClick={() => onSort('categoria')}>
+                                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer group hover:text-foreground transition-colors" onClick={() => onSort?.('paymentMethod')}>
+                                        <div className="flex items-center gap-1">
+                                            Pagamento
+                                            {renderSortIcon('paymentMethod')}
+                                        </div>
+                                    </th>
+                                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer group hover:text-foreground transition-colors" onClick={() => onSort?.('category')}>
                                         <div className="flex items-center gap-1">
                                             Categoria
-                                            {renderSortIcon('categoria')}
+                                            {renderSortIcon('category')}
                                         </div>
                                     </th>
-                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right cursor-pointer group hover:text-foreground transition-colors" onClick={() => onSort('valor')}>
+                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right cursor-pointer group hover:text-foreground transition-colors" onClick={() => onSort?.('value')}>
                                         <div className="flex items-center justify-end gap-1">
                                             Valor
-                                            {renderSortIcon('valor')}
+                                            {renderSortIcon('value')}
                                         </div>
                                     </th>
                                     <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-center">Ações</th>
                                 </tr>
                             </thead>
                             <tbody className="[&_tr:last-child]:border-0">
-                                {gastos.map((gasto) => {
-                                    const user = gasto.user;
+                                {gastos.map((g, index) => {
+                                    const user = g.user;
                                     const userColor = stringToColor(user?.name || 'User');
                                     return (
-                                        <tr key={gasto.id || Math.random().toString()} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                                        <tr key={g.id || `temp-${index}`} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                                             {showUserColumn && user && (
                                                 <td className="p-4 align-middle">
                                                     <div className="flex items-center gap-2">
@@ -125,18 +130,17 @@ export const RecurringExpensesTable = ({
                                                     </div>
                                                 </td>
                                             )}
-                                            <td className="p-4 align-middle text-foreground font-medium">{gasto.descricao}</td>
+                                            <td className="p-4 align-middle text-foreground font-medium">{g.description || 'Sem descrição'}</td>
                                             <td className="p-4 align-middle">
-                                                <div className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${getPaymentStyle(gasto.pagamento || '')}`}>
-                                                    {gasto.pagamento}
+                                                <div className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${getPaymentStyle(g.paymentMethod || '')}`}>
+                                                    {g.paymentMethod || 'Cartão'}
                                                 </div>
                                             </td>
                                             <td className="p-4 align-middle">
-                                                {/* @ts-ignore */}
-                                                <Badge variant={getCategoryColor(gasto.categoria)}>{gasto.categoria}</Badge>
+                                                <Badge variant={getCategoryColor(g.category || '') as any}>{g.category || 'Geral'}</Badge>
                                             </td>
                                             <td className="p-4 align-middle text-right text-foreground font-medium">
-                                                R$ {(gasto.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                R$ {(g.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             </td>
                                             <td className="p-4 align-middle text-center">
                                                 <div className="flex items-center justify-center gap-2">

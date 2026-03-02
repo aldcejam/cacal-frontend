@@ -1,8 +1,8 @@
 import { Typography } from '../atoms/Typography';
-import type { Cartao } from '../../api/services/cartao/@types/Cartao';
+import type { CardFindRes } from '../../api/services/card/@types/CardFindRes';
 
 interface CreditCardProps {
-    card: Cartao & { percent?: number; closing?: number; due?: number };
+    card: CardFindRes & { percent?: number; closing?: number; due?: number };
     isSelected?: boolean;
     onClick?: () => void;
     showProgressBar?: boolean;
@@ -27,7 +27,7 @@ const darkenColor = (hex: string, percent: number) => {
 };
 
 export const CreditCard = ({ card, isSelected = false, onClick, showProgressBar = false }: CreditCardProps) => {
-    const primaryColor = card.bank?.color || '#333';
+    const primaryColor = '#333';
     const secondaryColor = darkenColor(primaryColor, 30);
 
     const gradientStyle = {

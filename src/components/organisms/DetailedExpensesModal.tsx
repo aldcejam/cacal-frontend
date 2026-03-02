@@ -7,10 +7,10 @@ import { TransactionTable } from './TransactionTable';
 import { Typography } from '../atoms/Typography';
 import { Button } from '../atoms/Button';
 
-import type { Usuario } from '../../api/services/usuario/@types/Usuario';
-import type { Cartao } from '../../api/services/cartao/@types/Cartao';
-import type { GastoRecorrente } from '../../api/services/gastoRecorrente/@types/GastoRecorrente';
-import type { Transacao } from '../../api/services/transacao/@types/Transacao';
+import type { User } from '../../api/services/user/@types/User';
+import type { CardFindRes } from '../../api/services/card/@types/CardFindRes';
+import type { ExpenseFindRes } from '../../api/services/recurringExpense/@types/ExpenseFindRes';
+import type { TransactionFindRes } from '../../api/services/transaction/@types/TransactionFindRes';
 
 // Helper for color generation
 const stringToColor = (str: string) => {
@@ -26,10 +26,10 @@ interface DetailedExpensesModalProps {
     isOpen: boolean;
     onClose: () => void;
     initialUserId: string | null;
-    usuarios: Usuario[];
-    creditCards: Cartao[];
-    recurringExpenses: GastoRecorrente[];
-    transactions: Transacao[];
+    usuarios: User[];
+    creditCards: CardFindRes[];
+    recurringExpenses: ExpenseFindRes[];
+    transactions: TransactionFindRes[];
 }
 
 export const DetailedExpensesModal = ({
@@ -165,15 +165,15 @@ export const DetailedExpensesModal = ({
 
         const recurringAsTransactions = activeRecurring.map((g) => ({
             id: `rec-${g.id}`,
-            card: { bank: { name: 'Recorrente', color: '#10b981' }, id: 'recurring' }, // Mock object for compat
-            description: g.descricao,
-            category: g.categoria,
-            value: g.valor || 0,
+            card: { id: 'recurring', lastDigits: 'Rec' }, // Mock object for compat
+            description: g.description,
+            category: g.category,
+            value: g.value || 0,
             parcels: 'Recorrente',
-            total: g.valor || 0,
+            total: g.value || 0,
             status: 'approved',
             isRecurring: true,
-            paymentMethod: g.pagamento // Passed to table
+            paymentMethod: g.paymentMethod // Passed to table
         }));
 
         combined.push(...recurringAsTransactions);
@@ -194,7 +194,7 @@ export const DetailedExpensesModal = ({
                 const user = g.user;
                 groups[userId] = { userId: userId, total: 0, count: 0, user };
             }
-            groups[userId].total += (g.valor || 0);
+            groups[userId].total += (g.value || 0);
             groups[userId].count += 1;
         });
 

@@ -1,8 +1,8 @@
 import { CreditCard } from '../molecules/CreditCard';
-import type { Cartao } from '../../api/services/cartao/@types/Cartao';
+import type { CardFindRes } from '../../api/services/card/@types/CardFindRes';
 
 interface CreditCardListProps {
-    cards: Cartao[];
+    cards: CardFindRes[];
     selectedIds: string[];
     onToggleCard: (id: string) => void;
 }

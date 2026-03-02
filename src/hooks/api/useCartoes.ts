@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/api';
+import type { CardFindRes } from '../../api/services/card/@types/CardFindRes';
 
 export const useCartoes = () => {
-    return useQuery({
+    return useQuery<CardFindRes[]>({
         queryKey: ['cartoes'],
-        queryFn: () => api.cartao.findAll({}),
+        queryFn: () => api.card.findAll({}),
     });
 };
