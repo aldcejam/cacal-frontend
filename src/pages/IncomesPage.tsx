@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useReceitas } from '../hooks/api/useReceitas';
-import { useUsuarios } from '../hooks/api/useUsuarios';
-import type { IncomeFindRes } from '../api/services/income/@types/IncomeFindRes';
+import { useTransacoes } from '../hooks/api/useTransacoes';
+import type { TransactionFindRes } from '../api/services/transaction/@types/TransactionFindRes';
 
 import { UserSelector } from '../components/organisms/UserSelector';
 import { Button } from '../components/atoms/Button';
@@ -43,7 +42,7 @@ const Header = ({ onOpenNewIncome }: HeaderProps) => (
         <Button variant="primary" onClick={onOpenNewIncome}>
             <div className="flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
-                <span className="hidden sm:inline">Nova Receita</span>
+                <span className="hidden sm:inline">Nova Entrada</span>
             </div>
         </Button>
     </header>
@@ -54,7 +53,7 @@ const IncomesTable = ({
     receitas,
     showUserColumn,
 }: {
-    receitas: IncomeFindRes[],
+    receitas: TransactionFindRes[],
     showUserColumn: boolean,
 }) => {
     const totalValue = receitas.reduce((acc, r) => acc + (r.value || 0), 0);
@@ -65,7 +64,7 @@ const IncomesTable = ({
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    Receitas Mensais
+                    Receitas Encontradas
                 </h2>
             </div>
 
@@ -74,7 +73,7 @@ const IncomesTable = ({
                     <div className="w-16 h-16 bg-secondary/50 rounded-full flex items-center justify-center mb-4">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-muted-foreground opacity-50"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
                     </div>
-                    <h3 className="text-lg font-medium text-muted-foreground">Nenhuma receita cadastrada</h3>
+                    <h3 className="text-lg font-medium text-muted-foreground">Nenhuma entrada encontrada</h3>
                 </div>
             ) : (
                 <div className="bg-card rounded-xl border border-border/50 overflow-hidden shadow-sm">
@@ -87,7 +86,7 @@ const IncomesTable = ({
                                     )}
                                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Descrição</th>
                                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Categoria</th>
-                                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Dia Receb.</th>
+                                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Meio</th>
                                     <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Valor</th>
                                     <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-center">Ações</th>
                                 </tr>
@@ -110,10 +109,10 @@ const IncomesTable = ({
                                             )}
                                             <td className="p-4 align-middle text-foreground font-medium">{receita.description}</td>
                                             <td className="p-4 align-middle">
-                                                <Badge variant={getCategoryColor(receita.category || '') as any}>{receita.category}</Badge>
+                                                <Badge variant={getCategoryColor(receita.category || '') as any}>{receita.category || 'Geral'}</Badge>
                                             </td>
                                             <td className="p-4 align-middle text-muted-foreground">
-                                                Dia {receita.receiptDay}
+                                                {receita.paymentName || '-'}
                                             </td>
                                             <td className="p-4 align-middle text-right text-emerald-500 font-bold">
                                                 R$ {(receita.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -129,7 +128,7 @@ const IncomesTable = ({
                             </tbody>
                             <tfoot className="font-medium bg-secondary/20 border-t border-border/50">
                                 <tr>
-                                    <td className="p-4 align-middle font-semibold text-foreground" colSpan={showUserColumn ? 3 : 2}>Total Estimado</td>
+                                    <td className="p-4 align-middle font-semibold text-foreground" colSpan={showUserColumn ? 3 : 2}>Total</td>
                                     <td className="p-4 align-middle"></td>
                                     <td className="p-4 align-middle text-right font-bold text-emerald-500 text-lg">
                                         R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -145,9 +144,14 @@ const IncomesTable = ({
     );
 };
 
+import { useAuthStore } from '../stores/useAuthStore';
+import { useUsuarios } from '../hooks/api/useUsuarios';
+
 export default function IncomesPage() {
-    const { data: receitas = [], isLoading: loadingReceitas, error: errorReceitas } = useReceitas();
+    const { data: transacoes = [], isLoading: loadingReceitas, error: errorReceitas } = useTransacoes('INCOME');
     const { data: usuarios = [], isLoading: loadingUsers, error: errorUsers } = useUsuarios();
+
+    const currentUser = useAuthStore(s => s.user);
 
     const loading = loadingReceitas || loadingUsers;
     const error = errorReceitas || errorUsers ? "Failed to load incomes data" : null;
@@ -156,13 +160,10 @@ export default function IncomesPage() {
     const [isNewIncomeModalOpen, setIsNewIncomeModalOpen] = useState(false);
 
     useEffect(() => {
-        if (usuarios.length > 0 && selectedUserIds.length === 0) {
-            const firstId = usuarios[0].id;
-            if (firstId) setSelectedUserIds([firstId]);
+        if (currentUser && selectedUserIds.length === 0) {
+            setSelectedUserIds([currentUser.id!]);
         }
-    }, [usuarios]);
-
-    const currentUser = usuarios.length > 0 ? usuarios[0] : null;
+    }, [currentUser, selectedUserIds.length]);
 
     const handleToggleUser = (userId: string) => {
         setSelectedUserIds(prev => {
@@ -174,8 +175,8 @@ export default function IncomesPage() {
     };
 
     const filteredReceitas = useMemo(() => {
-        return receitas.filter(r => r.user?.id && selectedUserIds.includes(r.user.id));
-    }, [selectedUserIds, receitas]);
+        return transacoes.filter(r => r.user?.id && selectedUserIds.includes(r.user.id));
+    }, [selectedUserIds, transacoes]);
 
     const totalIncome = filteredReceitas.reduce((acc, r) => acc + (r.value || 0), 0);
 
@@ -205,6 +206,7 @@ export default function IncomesPage() {
                         selectedUserIds={selectedUserIds}
                         onToggleUser={handleToggleUser}
                         currentUser={currentUser}
+                        users={usuarios}
                     />
                 )}
 
@@ -212,7 +214,7 @@ export default function IncomesPage() {
                     <MetricCard
                         title="Total de Entradas"
                         value={`R$ ${totalIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-                        subtitle="Soma de todas as receitas selecionadas"
+                        subtitle="Soma de todas as entradas selecionadas"
                         icon={<i className="ri-wallet-3-line"></i>}
                         variant="default"
                     />
@@ -227,7 +229,6 @@ export default function IncomesPage() {
             <NewIncomeModal
                 isOpen={isNewIncomeModalOpen}
                 onClose={() => setIsNewIncomeModalOpen(false)}
-                users={usuarios}
             />
         </div>
     );

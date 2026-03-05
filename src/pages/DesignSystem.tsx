@@ -5,7 +5,7 @@ import { GlassCard } from '../components/atoms/GlassCard';
 import { Typography } from '../components/atoms/Typography';
 import { Input } from '../components/atoms/Input';
 import { MetricCard } from '../components/molecules/MetricCard';
-import { CreditCard } from '../components/molecules/CreditCard';
+import { PaymentCard } from '../components/molecules/PaymentCard';
 
 import { Select } from '../components/atoms/Select';
 import { Textarea } from '../components/atoms/Textarea';
@@ -13,15 +13,12 @@ import { Checkbox } from '../components/atoms/Checkbox';
 import { Switch } from '../components/atoms/Switch';
 
 // Using mock data for preview
-const mockCard = {
+const mockPayment = {
     id: "1",
-    bank: { name: 'Nubank Roxinho', color: '#8b5cf6' },
-    lastDigits: '8832',
-    limit: 5000,
-    available: 2660,
-    closing: 15,
-    due: 22,
-    percent: 53.2
+    name: 'Nubank Roxinho',
+    type: 'CREDIT_CARD' as const,
+    relationType: 'BANK',
+    relationName: 'Nubank'
 };
 
 const selectOptions = [
@@ -186,11 +183,10 @@ export default function DesignSystemPage() {
                     />
 
                     <div className="col-span-full md:col-span-2 lg:col-span-1">
-                        <CreditCard
-                            card={mockCard}
+                        <PaymentCard
+                            payment={mockPayment as any}
                             isSelected={toggle}
                             onClick={() => setToggle(!toggle)}
-                            showProgressBar
                         />
                     </div>
                 </div>

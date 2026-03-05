@@ -6,7 +6,6 @@ import './index.css'
 
 import LoginPage from './pages/LoginPage';
 import OverviewPage from './pages/OverviewPage';
-import CardsPage from './pages/CardsPage';
 import RecurringExpensesPage from './pages/RecurringExpensesPage';
 import IncomesPage from './pages/IncomesPage';
 import DesignSystemPage from './pages/DesignSystem';
@@ -41,7 +40,6 @@ const AppRoot = () => {
             <Route element={<MainLayout />}>
               <Route path="/" element={<OverviewPage />} />
               <Route path="/entradas" element={<IncomesPage />} />
-              <Route path="/cartoes" element={<CardsPage />} />
               <Route path="/gastos-recorrentes" element={<RecurringExpensesPage />} />
               <Route path="/design-system" element={<DesignSystemPage />} />
               <Route path="/relatorios" element={

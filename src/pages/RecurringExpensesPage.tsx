@@ -1,15 +1,19 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useGastosRecorrentes } from '../hooks/api/useGastosRecorrentes';
-import { useUsuarios } from '../hooks/api/useUsuarios';
-import type { ExpenseFindRes } from '../api/services/recurringExpense/@types/ExpenseFindRes';
+import { useTransacoes } from '../hooks/api/useTransacoes';
+import type { TransactionFindRes } from '../api/services/transaction/@types/TransactionFindRes';
 
 import { UserSelector } from '../components/organisms/UserSelector';
 import { MetricCard } from '../components/molecules/MetricCard';
 import { RecurringExpensesTable } from '../components/organisms/RecurringExpensesTable';
 
+import { useUsuarios } from '../hooks/api/useUsuarios';
+import { useAuthStore } from '../stores/useAuthStore';
+
 export default function RecurringExpensesPage() {
-    const { data: gastosRecorrentes = [], isLoading: loadingGastos, error: errorGastos } = useGastosRecorrentes();
+    const { data: gastos = [], isLoading: loadingGastos, error: errorGastos } = useTransacoes('EXPENSE');
     const { data: usuarios = [], isLoading: loadingUsers, error: errorUsers } = useUsuarios();
+
+    const currentUser = useAuthStore(s => s.user);
 
     const loading = loadingGastos || loadingUsers;
     const error = errorGastos || errorUsers ? "Failed to load data" : null;
@@ -18,15 +22,10 @@ export default function RecurringExpensesPage() {
     const [sortConfig, setSortConfig] = useState<any>({ key: null, direction: 'asc' });
 
     useEffect(() => {
-        if (usuarios.length > 0 && selectedUserIds.length === 0) {
-            const firstId = usuarios[0].id;
-            if (firstId) {
-                setSelectedUserIds([firstId]);
-            }
+        if (currentUser && selectedUserIds.length === 0) {
+            setSelectedUserIds([currentUser.id!]);
         }
-    }, [usuarios]);
-
-    const currentUser = usuarios.length > 0 ? usuarios[0] : null;
+    }, [currentUser, selectedUserIds.length]);
 
     // --- Handlers ---
     const handleToggleUser = (userId: string) => {
@@ -38,7 +37,7 @@ export default function RecurringExpensesPage() {
         });
     };
 
-    const handleSort = (key: keyof ExpenseFindRes) => {
+    const handleSort = (key: keyof TransactionFindRes) => {
         let direction = 'asc';
         if (sortConfig.key === key && sortConfig.direction === 'asc') {
             direction = 'desc';
@@ -48,8 +47,8 @@ export default function RecurringExpensesPage() {
 
     // --- Filtering & Sorting ---
     const filteredGastos = useMemo(() => {
-        return gastosRecorrentes.filter(g => g.user?.id && selectedUserIds.includes(g.user.id));
-    }, [selectedUserIds, gastosRecorrentes]);
+        return gastos.filter(g => g.user?.id && selectedUserIds.includes(g.user.id));
+    }, [selectedUserIds, gastos]);
 
     const sortedGastos = useMemo(() => {
         let sortableItems = [...filteredGastos];
@@ -94,8 +93,8 @@ export default function RecurringExpensesPage() {
         <div className="flex-1 p-6 md:p-8 overflow-y-auto w-full">
             <header className="flex items-center justify-between mb-8 pl-12 md:pl-0">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground tracking-tight">Gastos Recorrentes</h1>
-                    <p className="text-sm text-muted-foreground hidden sm:block">Gerencie assinaturas e pagamentos fixos mensais.</p>
+                    <h1 className="text-2xl font-bold text-foreground tracking-tight">Saídas</h1>
+                    <p className="text-sm text-muted-foreground hidden sm:block">Gerencie seus gastos.</p>
                 </div>
             </header>
 
@@ -105,12 +104,13 @@ export default function RecurringExpensesPage() {
                         selectedUserIds={selectedUserIds}
                         onToggleUser={handleToggleUser}
                         currentUser={currentUser}
+                        users={usuarios}
                     />
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <MetricCard
-                        title="Total Mensal"
+                        title="Total Saídas"
                         value={`R$ ${totalGastos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                         subtitle="Soma das despesas listadas"
                         icon={<i className="ri-money-dollar-circle-line"></i>}

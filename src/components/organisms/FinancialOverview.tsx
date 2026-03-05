@@ -1,17 +1,11 @@
 import { useMemo } from 'react';
-import type { IncomeFindRes } from '../../api/services/income/@types/IncomeFindRes';
-import type { TransactionFindRes } from '../../api/services/transaction/@types/TransactionFindRes';
-import type { ExpenseFindRes } from '../../api/services/recurringExpense/@types/ExpenseFindRes';
 import type { User } from '../../api/services/user/@types/User';
-import type { CardFindRes } from '../../api/services/card/@types/CardFindRes';
+import type { MonthSummary } from '../../api/services/transaction/@types/MonthSummary';
 
 interface FinancialOverviewProps {
     onUserClick?: (userId: string) => void;
-    receitas: IncomeFindRes[];
-    transactions: TransactionFindRes[];
-    recurringExpenses: ExpenseFindRes[];
+    summary: MonthSummary;
     usuarios: User[];
-    cards: CardFindRes[];
 }
 
 // Helper for color generation
@@ -26,63 +20,46 @@ const stringToColor = (str: string) => {
 
 export const FinancialOverview = ({
     onUserClick,
-    receitas,
-    transactions,
-    recurringExpenses,
+    summary,
     usuarios,
-    cards
 }: FinancialOverviewProps) => {
-    // 1. Calculate Family Totals
-    const familyTotals = useMemo(() => {
-        const totalIncome = receitas.reduce((acc, r) => acc + (r.value || 0), 0);
 
-        const totalRecurring = recurringExpenses.reduce((acc, g) => acc + (g.value || 0), 0);
+    const transactions = summary.periodTransactions || [];
 
-        const totalCreditCard = transactions.reduce((acc, t) => acc + (t.value || 0), 0);
-
-        const totalExpenses = totalRecurring + totalCreditCard;
-        const balance = totalIncome - totalExpenses;
-
-        return { totalIncome, totalExpenses, balance, totalRecurring, totalCreditCard };
-    }, [receitas, recurringExpenses, transactions]);
-
-    // 2. Calculate Per User
+    // Calculate Per User
     const userStats = useMemo(() => {
         return usuarios.map((user) => {
             const userId = user.id;
-            if (!userId) return null; // Skip users without ID
+            if (!userId) return null;
 
-            const userIncome = receitas
-                .filter((r) => r.user?.id === userId)
-                .reduce((acc, r) => acc + (r.value || 0), 0);
-
-            const userRecurring = recurringExpenses
-                .filter((g) => g.user?.id === userId)
-                .reduce((acc, g) => acc + (g.value || 0), 0);
-
-            // Find user's cards
-            const userCardIds = cards
-                .filter((c) => c.user?.id === userId && c.id)
-                .map((c) => c.id!);
-
-            const userCreditCard = transactions
-                .filter((t) => t.card?.id && userCardIds.includes(t.card.id))
+            const userIncome = transactions
+                .filter((t) => t.type === 'INCOME' && t.user?.id === userId)
                 .reduce((acc, t) => acc + (t.value || 0), 0);
 
-            const totalExpenses = userRecurring + userCreditCard;
-            const balance = userIncome - totalExpenses;
+            const userExpenses = transactions
+                .filter((t) => t.type === 'EXPENSE' && t.user?.id === userId)
+                .reduce((acc, t) => acc + (t.value || 0), 0);
 
+            const balance = userIncome - userExpenses;
             const userColor = stringToColor(user.name || 'User');
 
             return {
                 user,
                 userIncome,
-                userExpenses: totalExpenses,
+                userExpenses,
                 userBalance: balance,
                 userColor
             };
-        }).filter(Boolean) as any[]; // Filter out nulls
-    }, [usuarios, receitas, recurringExpenses, cards, transactions]);
+        }).filter(Boolean) as any[];
+    }, [usuarios, transactions]);
+
+    const totalIncome = transactions
+        .filter((t) => t.type === 'INCOME')
+        .reduce((acc, t) => acc + (t.value || 0), 0);
+
+    const totalExpenses = transactions
+        .filter((t) => t.type === 'EXPENSE')
+        .reduce((acc, t) => acc + (t.value || 0), 0);
 
     return (
         <section className="mb-8 space-y-6">
@@ -92,7 +69,7 @@ export const FinancialOverview = ({
             </div>
 
             {/* Family Overview */}
-            <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 shadow-xl border border-white/10 relative overflow-hidden">
+            <div className="bg-linear-to-br from-gray-900 to-gray-800 rounded-2xl p-6 shadow-xl border border-white/10 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-5">
                     <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10V22H21V10H3ZM5 12H19V20H5V12ZM19 8H5V4H19V8ZM19 2H5C3.89 2 3 2.89 3 4V8H22V4C22 2.89 21.11 2 20 2H19Z" /></svg>
                 </div>
@@ -103,20 +80,19 @@ export const FinancialOverview = ({
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                             <p className="text-emerald-400 text-sm font-medium mb-1">Entradas Totais</p>
-                            <p className="text-3xl font-bold text-white">R$ {familyTotals.totalIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                            <p className="text-3xl font-bold text-white">R$ {totalIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                         </div>
                         <div>
-                            <p className="text-rose-400 text-sm font-medium mb-1">Saídas Totais</p>
-                            <p className="text-3xl font-bold text-white">R$ {familyTotals.totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                            <p className="text-rose-400 text-sm font-medium mb-1">Saídas Mapeadas</p>
+                            <p className="text-3xl font-bold text-white">R$ {totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                             <p className="text-xs text-white/50 mt-1">
-                                (Cartão: {familyTotals.totalCreditCard.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} +
-                                Fixos: {familyTotals.totalRecurring.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})
+                                (As que caem neste ciclo mensal)
                             </p>
                         </div>
                         <div>
-                            <p className="text-blue-400 text-sm font-medium mb-1">Saldo Final</p>
-                            <p className={`text-3xl font-bold ${familyTotals.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                R$ {familyTotals.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            <p className="text-blue-400 text-sm font-medium mb-1">Saldo Final Projetado</p>
+                            <p className={`text-3xl font-bold ${(summary.leftover ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                R$ {summary.leftover?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || "0,00"}
                             </p>
                         </div>
                     </div>
@@ -129,11 +105,7 @@ export const FinancialOverview = ({
                     <div
                         key={user.id}
                         onClick={() => onUserClick && onUserClick(user.id)}
-                        className={`
-                            bg-card rounded-xl border border-border/50 p-5 shadow-sm 
-                            transition-all duration-300 group
-                            ${onUserClick ? 'cursor-pointer hover:shadow-lg hover:bg-secondary/10 hover:-translate-y-1' : ''}
-                        `}
+                        className={`bg-card rounded-xl border border-border/50 p-5 shadow-sm transition-all duration-300 group ${onUserClick ? 'cursor-pointer hover:shadow-lg hover:bg-secondary/10 hover:-translate-y-1' : ''}`}
                     >
                         <div className="flex items-center gap-3 mb-4 border-b border-border/50 pb-3">
                             <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm transition-transform group-hover:scale-110" style={{ backgroundColor: userColor }}>

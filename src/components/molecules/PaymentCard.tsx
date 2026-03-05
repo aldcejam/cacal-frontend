@@ -1,11 +1,10 @@
 import { Typography } from '../atoms/Typography';
-import type { CardFindRes } from '../../api/services/card/@types/CardFindRes';
+import type { PaymentFindRes } from '../../api/services/payment/@types/PaymentFindRes';
 
-interface CreditCardProps {
-    card: CardFindRes & { percent?: number; closing?: number; due?: number };
+interface PaymentCardProps {
+    payment: PaymentFindRes;
     isSelected?: boolean;
     onClick?: () => void;
-    showProgressBar?: boolean;
 }
 
 const darkenColor = (hex: string, percent: number) => {
@@ -26,7 +25,7 @@ const darkenColor = (hex: string, percent: number) => {
     ).toString(16).slice(1);
 };
 
-export const CreditCard = ({ card, isSelected = false, onClick, showProgressBar = false }: CreditCardProps) => {
+export const PaymentCard = ({ payment, isSelected = false, onClick }: PaymentCardProps) => {
     const primaryColor = '#333';
     const secondaryColor = darkenColor(primaryColor, 30);
 
@@ -49,45 +48,25 @@ export const CreditCard = ({ card, isSelected = false, onClick, showProgressBar 
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-5 bg-white/20 rounded-md backdrop-blur-sm border border-white/10"></div>
                         <Typography variant="body-base" weight="semibold" className="text-white">
-                            {card.bank?.name || 'Banco'}
+                            {payment.name || 'Pagamento'}
                         </Typography>
                     </div>
-                    <Typography variant="body-sm" className="font-mono opacity-80">
-                        •••• {card.lastDigits || '0000'}
-                    </Typography>
                 </div>
 
                 <div className="space-y-1 mb-4">
                     <Typography variant="body-xs" className="uppercase tracking-wider opacity-70 font-medium">
-                        Limite Total
+                        Tipo de Relação
                     </Typography>
-                    <Typography variant="h3" weight="bold" className="tracking-tight">
-                        R$ {(card.limitValue || 0).toLocaleString('pt-BR')}
+                    <Typography variant="body-base" weight="bold" className="tracking-tight">
+                        {payment.personName ? `Pessoa: ${payment.personName}` : (payment.bankId ? 'Instituição Bancária' : 'Genérico')}
                     </Typography>
                 </div>
 
                 <div className="flex justify-between items-end">
                     <Typography variant="body-sm" className="opacity-90 font-medium">
-                        Disponível: R$ {(card.available || 0).toLocaleString('pt-BR')}
+                        Modalidade: {payment.type || 'Indefinida'}
                     </Typography>
                 </div>
-
-                {showProgressBar && card.percent !== undefined && (
-                    <div className="mt-5">
-                        <div className="w-full bg-black/20 rounded-full h-1.5 overflow-hidden">
-                            <div
-                                className="bg-white h-full rounded-full transition-all duration-1000"
-                                style={{ width: `${card.percent}%` }}
-                            ></div>
-                        </div>
-                        {(card.closing || card.due) && (
-                            <div className="flex justify-between pt-3 mt-2 border-t border-white/10 text-xs text-white/90">
-                                {card.closing && <div><span className="opacity-70">Fecha:</span> <strong>Dia {card.closing}</strong></div>}
-                                {card.due && <div><span className="opacity-70">Vence:</span> <strong>Dia {card.due}</strong></div>}
-                            </div>
-                        )}
-                    </div>
-                )}
             </div>
 
             {/* Visual decorations */}

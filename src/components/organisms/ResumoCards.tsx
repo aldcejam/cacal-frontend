@@ -1,39 +1,25 @@
 import { MetricCard } from '../molecules/MetricCard';
 
 interface ResumoCardsProps {
-    totalGastos: number;
-    totalCartoes: number;
-    totalLimite: number;
-    totalDisponivel: number;
+    totalPending: number;
+    totalLeftover: number;
 }
 
-export const ResumoCards = ({ totalGastos, totalCartoes, totalLimite, totalDisponivel }: ResumoCardsProps) => {
+export const ResumoCards = ({ totalPending, totalLeftover }: ResumoCardsProps) => {
     return (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <MetricCard
-                title="Gastos Recorrentes"
-                value={`R$ ${totalGastos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-                subtitle="Total mensal"
+                title="Pendências do Período"
+                value={`R$ ${totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                subtitle="Ainda a pagar neste Mês"
                 icon={<i className="ri-calendar-check-line"></i>}
             />
             <MetricCard
-                title="Cartões"
-                value={totalCartoes}
-                subtitle="Total de cartões"
-                icon={<i className="ri-bank-card-line"></i>}
-            />
-            <MetricCard
-                title="Limite Total"
-                value={`R$ ${totalLimite.toLocaleString('pt-BR')}`}
-                subtitle="Soma de todos os limites"
-                icon={<i className="ri-dashboard-3-line"></i>}
-            />
-            <MetricCard
-                title="Disponível"
-                value={`R$ ${totalDisponivel.toLocaleString('pt-BR')}`}
-                subtitle="Crédito disponível"
+                title="Sobra Projetada"
+                value={`R$ ${totalLeftover.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                subtitle="Ganhos - Despesas"
                 icon={<i className="ri-wallet-3-line"></i>}
-                variant="default"
+                variant={totalLeftover >= 0 ? "default" : "danger"}
             />
         </div>
     );

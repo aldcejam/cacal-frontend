@@ -9,14 +9,7 @@ import { PageHeader } from '../components/molecules/PageHeader';
 
 export default function OverviewPage() {
     const {
-        totalGastos,
-        totalCartoes,
-        totalLimite,
-        totalDisponivel,
-        transactions,
-        cards,
-        recurringExpenses,
-        receitas,
+        summaryData,
         usuarios,
         loading,
         error
@@ -41,11 +34,14 @@ export default function OverviewPage() {
         );
     }
 
+    const defaultSummary = { leftover: 0, pendingToPay: 0, periodTransactions: [] };
+    const currSummary = summaryData || defaultSummary;
+
     return (
         <div className="flex-1 p-6 md:p-8 overflow-y-auto w-full">
             <PageHeader
                 title="Visão Geral"
-                description="Consolidação de cartões e gastos recorrentes de todos os usuários."
+                description="Consolidação e projeção de entradas e saídas no mês atual."
             />
 
             <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
@@ -54,27 +50,20 @@ export default function OverviewPage() {
                         setSelectedUserId(userId);
                         setIsModalOpen(true);
                     }}
-                    receitas={receitas}
-                    transactions={transactions}
-                    recurringExpenses={recurringExpenses}
+                    summary={currSummary}
                     usuarios={usuarios}
-                    cards={cards}
                 />
 
                 <ResumoCards
-                    totalGastos={totalGastos}
-                    totalCartoes={totalCartoes}
-                    totalLimite={totalLimite}
-                    totalDisponivel={totalDisponivel}
+                    totalPending={currSummary.pendingToPay}
+                    totalLeftover={currSummary.leftover}
                 />
 
                 <DetailedExpensesModal
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
                     initialUserId={selectedUserId}
-                    transactions={transactions}
-                    creditCards={cards}
-                    recurringExpenses={recurringExpenses}
+                    transactions={currSummary.periodTransactions || []}
                     usuarios={usuarios}
                 />
             </div>

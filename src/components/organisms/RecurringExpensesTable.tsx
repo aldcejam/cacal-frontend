@@ -1,4 +1,4 @@
-import type { ExpenseFindRes } from '../../api/services/recurringExpense/@types/ExpenseFindRes';
+import type { TransactionFindRes } from '../../api/services/transaction/@types/TransactionFindRes';
 import { Badge } from '../atoms/Badge';
 
 // Helper for category style reused locally
@@ -36,7 +36,7 @@ const stringToColor = (str: string) => {
 };
 
 interface RecurringExpensesTableProps {
-    gastos: ExpenseFindRes[];
+    gastos: TransactionFindRes[];
     onSort?: (key: any) => void;
     sortConfig?: { key: any; direction: string };
     showUserColumn?: boolean;
@@ -63,7 +63,7 @@ export const RecurringExpensesTable = ({
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                    Gastos Recorrentes
+                    Saídas Regulares
                 </h2>
             </div>
 
@@ -76,7 +76,7 @@ export const RecurringExpensesTable = ({
                             <path d="M12 5v14"></path>
                         </svg>
                     </div>
-                    <h3 className="text-lg font-medium text-muted-foreground">Nenhum gasto recorrente cadastrado</h3>
+                    <h3 className="text-lg font-medium text-muted-foreground">Nenhuma saída encontrada</h3>
                 </div>
             ) : (
                 <div className="bg-card rounded-xl border border-border/50 overflow-hidden shadow-sm">
@@ -93,10 +93,10 @@ export const RecurringExpensesTable = ({
                                             {renderSortIcon('description')}
                                         </div>
                                     </th>
-                                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer group hover:text-foreground transition-colors" onClick={() => onSort?.('paymentMethod')}>
+                                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer group hover:text-foreground transition-colors" onClick={() => onSort?.('paymentName')}>
                                         <div className="flex items-center gap-1">
                                             Pagamento
-                                            {renderSortIcon('paymentMethod')}
+                                            {renderSortIcon('paymentName')}
                                         </div>
                                     </th>
                                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer group hover:text-foreground transition-colors" onClick={() => onSort?.('category')}>
@@ -132,8 +132,8 @@ export const RecurringExpensesTable = ({
                                             )}
                                             <td className="p-4 align-middle text-foreground font-medium">{g.description || 'Sem descrição'}</td>
                                             <td className="p-4 align-middle">
-                                                <div className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${getPaymentStyle(g.paymentMethod || '')}`}>
-                                                    {g.paymentMethod || 'Cartão'}
+                                                <div className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${getPaymentStyle(g.paymentName || '')}`}>
+                                                    {g.paymentName || 'Meio Padrão'}
                                                 </div>
                                             </td>
                                             <td className="p-4 align-middle">

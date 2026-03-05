@@ -1,11 +1,8 @@
 import { Badge } from '../atoms/Badge';
 import type { TransactionFindRes } from '../../api/services/transaction/@types/TransactionFindRes';
-import type { CardFindRes } from '../../api/services/card/@types/CardFindRes';
 
 interface TransactionTableProps {
     transactions: TransactionFindRes[];
-    cards?: CardFindRes[]; // Unused but updated type just in case
-    selectedIds?: string[];
     title?: string;
     onSort?: (key: any) => void;
     sortConfig?: { key: any; direction: string };
@@ -14,13 +11,13 @@ interface TransactionTableProps {
 
 export const TransactionTable = ({
     transactions,
-    title = "Despesas",
+    title = "Transações",
     onSort,
     sortConfig,
+    emptyMessage = "Nenhuma transação encontrada."
 }: TransactionTableProps) => {
 
     const totalValue = transactions.reduce((acc, t) => acc + (t.value || 0), 0);
-    const totalFull = transactions.reduce((acc, t) => acc + (t.total || 0), 0);
 
     const renderSortIcon = (key: string) => {
         if (!sortConfig || !onSort) return null;
@@ -31,18 +28,26 @@ export const TransactionTable = ({
         );
     };
 
-    // Helper for category style (simplified version of local helpers)
     const getCategoryColor = (cat: string) => {
         switch (cat) {
             case 'Streaming': return 'violet';
-            case 'Alimentação': return 'default'; // Using default for amber/yellow usually
+            case 'Alimentação': return 'default';
             case 'Eletrônicos': return 'blue';
             case 'Transporte': return 'emerald';
-            case 'Saúde': return 'red'; // Rose
+            case 'Saúde': return 'red';
             case 'Telecomunicações': return 'cyan';
-            case 'Educação': return 'blue'; // Indigo
+            case 'Educação': return 'blue';
             default: return 'default';
         }
+    };
+
+    const parseRecurrence = (t: TransactionFindRes) => {
+        if (!t.recurrenceDetails) return 'Avulso';
+        const type = t.recurrenceDetails.tipo as string;
+        if (type === 'RECURRING') return 'Recorrente';
+        if (type === 'PERIOD') return 'Período';
+        if (type === 'PERIOD_QUANTITY') return `Parcelado (${t.recurrenceDetails.quantidade || '?'})`;
+        return 'Avulso';
     };
 
     return (
@@ -62,6 +67,7 @@ export const TransactionTable = ({
                             <path d="M12 5v14"></path>
                         </svg>
                     </div>
+                    <p className="text-muted-foreground">{emptyMessage}</p>
                 </div>
             ) : (
                 <div className="bg-card rounded-xl border border-border/50 overflow-hidden shadow-sm">
@@ -69,10 +75,11 @@ export const TransactionTable = ({
                         <table className="w-full caption-bottom text-sm">
                             <thead className="[&_tr]:border-b">
                                 <tr className="border-b border-border/50 transition-colors hover:bg-transparent bg-secondary/20">
-                                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Origem</th>
+                                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Meio de Pagamento</th>
                                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Descrição</th>
                                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Categoria</th>
-
+                                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Tipo/Recorrência</th>
+                                    <th className="h-12 px-4 text-center align-middle font-medium text-muted-foreground">Status</th>
                                     <th
                                         className="h-12 px-4 align-middle font-medium text-muted-foreground text-right cursor-pointer hover:text-foreground transition-colors group"
                                         onClick={() => onSort && onSort('value')}
@@ -82,36 +89,16 @@ export const TransactionTable = ({
                                             {renderSortIcon('value')}
                                         </div>
                                     </th>
-                                    <th
-                                        className="h-12 px-4 align-middle font-medium text-muted-foreground text-center cursor-pointer hover:text-foreground transition-colors group"
-                                        onClick={() => onSort && onSort('parcels')}
-                                    >
-                                        <div className="flex items-center justify-center gap-1">
-                                            Parcelas
-                                            {renderSortIcon('parcels')}
-                                        </div>
-                                    </th>
-                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Total</th>
                                 </tr>
                             </thead>
                             <tbody className="[&_tr:last-child]:border-0">
                                 {transactions.map((t) => {
-                                    const card = t.card;
                                     return (
                                         <tr key={t.id || Math.random().toString()} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                                             <td className="p-4 align-middle font-medium text-foreground">
                                                 <div className="flex items-center gap-2">
-                                                    {card ? (
-                                                        <>
-                                                            <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                                                            Cartão final {card.lastDigits || '0000'}
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                                                            <span className="text-muted-foreground">{'Outro'}</span>
-                                                        </>
-                                                    )}
+                                                    <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                                    {t.paymentName || 'Geral'}
                                                 </div>
                                             </td>
                                             <td className="p-4 align-middle text-foreground font-medium">{t.description || 'Sem descrição'}</td>
@@ -120,14 +107,18 @@ export const TransactionTable = ({
                                                     {t.category || 'Geral'}
                                                 </Badge>
                                             </td>
-                                            <td className="p-4 align-middle text-right text-foreground font-medium">
-                                                R$ {(t.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            <td className="p-4 align-middle text-muted-foreground">
+                                                {parseRecurrence(t)}
                                             </td>
-                                            <td className="p-4 align-middle text-center text-muted-foreground tabular-nums">
-                                                {t.parcels || '1/1'}
+                                            <td className="p-4 align-middle text-center">
+                                                {t.isPaid ? (
+                                                    <Badge variant="success">Pago</Badge>
+                                                ) : (
+                                                    <Badge variant="warning">Pendente</Badge>
+                                                )}
                                             </td>
-                                            <td className="p-4 align-middle text-right text-foreground font-semibold">
-                                                R$ {(t.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            <td className={`p-4 align-middle text-right font-medium ${t.type === 'INCOME' ? 'text-emerald-500' : 'text-foreground'}`}>
+                                                {t.type === 'INCOME' ? '+' : '-'} R$ {(t.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             </td>
                                         </tr>
                                     );
@@ -135,19 +126,15 @@ export const TransactionTable = ({
                             </tbody>
                             <tfoot className="font-medium bg-secondary/20 border-t border-border/50">
                                 <tr>
-                                    <td className="p-4 align-middle font-semibold text-foreground" colSpan={3}>Total</td>
+                                    <td className="p-4 align-middle font-semibold text-foreground" colSpan={5}>Soma do Valor Listado</td>
                                     <td className="p-4 align-middle text-right font-bold text-primary">
                                         R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </td>
-                                    <td className="p-4 align-middle"></td>
-                                    <td className="p-4 align-middle text-right font-bold text-primary">
-                                        R$ {totalFull.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                     </td>
                                 </tr>
                             </tfoot>
                         </table >
-                    </div >
-                </div >
+                    </div>
+                </div>
             )}
         </section >
     );

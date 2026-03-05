@@ -7,4 +7,5 @@ export type User = {
   password?: string;
   role?: string;
   avatarUrl?: string;
+  viewingIntervalStartDay?: number;
 };
